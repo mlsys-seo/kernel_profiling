@@ -151,7 +151,6 @@ def monkeypatch_func_to_module():
     F.adaptive_avg_pool2d = Adaptive_avg_pool2d_module()
     F.hardswish = Hardswish_module()
     F.dropout = Dropout_module()
-    # import pdb; pdb.set_trace()
     # torch._C._VariableFunctions.cat = Concat_module()    
     
     
