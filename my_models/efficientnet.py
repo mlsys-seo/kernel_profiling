@@ -42,6 +42,13 @@ __all__ = [
     "efficientnet_v2_l",
 ]
 
+class Add_module(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+    def forward(self, input, another_input) -> torch.Tensor:
+        return torch.add(input, another_input)
+
+add = Add_module()
 
 @dataclass
 class _MBConvConfig:
@@ -164,7 +171,7 @@ class MBConv(nn.Module):
         result = self.block(input)
         if self.use_res_connect:
             result = self.stochastic_depth(result)
-            result += input
+            result = add(result, input)
         return result
 
 
@@ -225,7 +232,7 @@ class FusedMBConv(nn.Module):
         result = self.block(input)
         if self.use_res_connect:
             result = self.stochastic_depth(result)
-            result += input
+            result = add(result, input)
         return result
 
 

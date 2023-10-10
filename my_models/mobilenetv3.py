@@ -115,7 +115,6 @@ class InvertedResidual(nn.Module):
     def forward(self, input: Tensor) -> Tensor:
         result = self.block(input)
         if self.use_res_connect:
-            # result += input
             add = Add_module()
             result = add(result, input)
         return result

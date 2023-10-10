@@ -25,7 +25,13 @@ __all__ = [
     "convnext_base",
     "convnext_large",
 ]
-
+class Add_module(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+    def forward(self, input, another_input) -> torch.Tensor:
+        return torch.add(input, another_input)
+    
+add = Add_module()
 
 class LayerNorm2d(nn.LayerNorm):
     def forward(self, x: Tensor) -> Tensor:
@@ -62,7 +68,7 @@ class CNBlock(nn.Module):
     def forward(self, input: Tensor) -> Tensor:
         result = self.layer_scale * self.block(input)
         result = self.stochastic_depth(result)
-        result += input
+        result = add(result, input)
         return result
 
 
