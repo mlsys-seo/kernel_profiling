@@ -15,20 +15,19 @@ import autonvtx
 def get_forward_pre_hook(event, label):
     def forward_pre_hook(m, input):
         torch.cuda.nvtx.range_push(label)
-        # event.record_start()
-        print(f"{label}")
+        event.record_start()
     return forward_pre_hook
 
 def get_forward_post_hook(event, label):
     def forward_post_hook(m, input, output):
-        # event.record_end()
+        event.record_end()
         torch.cuda.nvtx.range_pop()
     return forward_post_hook
 
 def get_backward_pre_hook(event, label):
     def backward_pre_hook(m, input):
         torch.cuda.nvtx.range_push(label)
-        # event.record_start()
+        event.record_start()
         # print(f"{label}")
         # if "Hardswish" in label:
             # print(m.inplace)
@@ -36,9 +35,8 @@ def get_backward_pre_hook(event, label):
 
 def get_backward_post_hook(event, label):
     def backward_post_hook(m, input, output):
-        # event.record_end()
+        event.record_end()
         torch.cuda.nvtx.range_pop()
-        pass
     return backward_post_hook
 
 parent_name = None
@@ -124,5 +122,4 @@ for _ in range(1):
 torch.cuda.synchronize()
 
 for parent, name, event in forward_events:
-    # print(f"{parent}/{name}/{event.get_time()}")
-    pass
+    print(f"{parent}/{name}/{event.get_time()}")
