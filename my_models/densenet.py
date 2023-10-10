@@ -15,6 +15,9 @@ from torchvision.models._api import register_model, Weights, WeightsEnum
 from torchvision.models._meta import _IMAGENET_CATEGORIES
 from torchvision.models._utils import _ovewrite_named_param, handle_legacy_interface
 
+from util import Cat_module
+
+cat  = Cat_module()
 __all__ = [
     "DenseNet",
     "DenseNet121_Weights",
@@ -27,16 +30,16 @@ __all__ = [
     "densenet201",
 ]
 
-class My_ReLU(nn.Module):
-    def __init__(self, inplace=True):
-        super(My_ReLU, self).__init__()
-        self.relu = nn.ReLU(inplace=inplace)
-        self.inplace = inplace
-    def forward(self, x):
-        split_unit = 16
-        for i in range(0, len(x), int(64/split_unit)):
-            self.relu(x[i:i+int(64/split_unit)][:][:][:])
-        return x
+# class My_ReLU(nn.Module):
+#     def __init__(self, inplace=True):
+#         super(My_ReLU, self).__init__()
+#         self.relu = nn.ReLU(inplace=inplace)
+#         self.inplace = inplace
+#     def forward(self, x):
+#         split_unit = 16
+#         for i in range(0, len(x), int(64/split_unit)):
+#             self.relu(x[i:i+int(64/split_unit)][:][:][:])
+#         return x
 
 class _DenseLayer(nn.Module):
     def __init__(
@@ -44,18 +47,18 @@ class _DenseLayer(nn.Module):
     ) -> None:
         super().__init__()
         self.norm1 = nn.BatchNorm2d(num_input_features)
-        self.relu1 = My_ReLU(inplace=True)
+        self.relu1 = nn.ReLU(inplace=True)
         self.conv1 = nn.Conv2d(num_input_features, bn_size * growth_rate, kernel_size=1, stride=1, bias=False)
 
         self.norm2 = nn.BatchNorm2d(bn_size * growth_rate)
-        self.relu2 = My_ReLU(inplace=True)
+        self.relu2 = nn.ReLU(inplace=True)
         self.conv2 = nn.Conv2d(bn_size * growth_rate, growth_rate, kernel_size=3, stride=1, padding=1, bias=False)
 
         self.drop_rate = float(drop_rate)
         self.memory_efficient = memory_efficient
 
     def bn_function(self, inputs: List[Tensor]) -> Tensor:
-        concated_features = torch.cat(inputs, 1)
+        concated_features = torch.cat(tuple(inputs), 1)
         bottleneck_output = self.conv1(self.relu1(self.norm1(concated_features)))  # noqa: T484
         return bottleneck_output
 
@@ -131,14 +134,14 @@ class _DenseBlock(nn.ModuleDict):
         for name, layer in self.items():
             new_features = layer(features)
             features.append(new_features)
-        return torch.cat(features, 1)
+        return torch.cat(tuple(features), 1)
 
 
 class _Transition(nn.Sequential):
     def __init__(self, num_input_features: int, num_output_features: int) -> None:
         super().__init__()
         self.norm = nn.BatchNorm2d(num_input_features)
-        self.relu = My_ReLU(inplace=True)
+        self.relu = nn.ReLU(inplace=True)
         self.conv = nn.Conv2d(num_input_features, num_output_features, kernel_size=1, stride=1, bias=False)
         self.pool = nn.AvgPool2d(kernel_size=2, stride=2)
 
@@ -178,7 +181,7 @@ class DenseNet(nn.Module):
                 [
                     ("conv0", nn.Conv2d(3, num_init_features, kernel_size=7, stride=2, padding=3, bias=False)),
                     ("norm0", nn.BatchNorm2d(num_init_features)),
-                    ("relu0", My_ReLU(inplace=True)),
+                    ("relu0", nn.ReLU(inplace=True)),
                     ("pool0", nn.MaxPool2d(kernel_size=3, stride=2, padding=1)),
                 ]
             )

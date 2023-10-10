@@ -122,7 +122,7 @@ class Dropout_module(torch.nn.Module):
         self.func = copy_func(F.dropout)
     def forward(self, x, p=0.5, training=True, inplace=False) -> torch.Tensor:
         # print("hardswish : start!!")
-        return self.func(x, p=0.5, training=True, inplace=False)
+        return self.func(x, p, training, inplace)
 
 class Layernorm_module(torch.nn.Module):
     def __init__(self) -> None:
@@ -130,13 +130,20 @@ class Layernorm_module(torch.nn.Module):
         self.func = copy_func(F.layer_norm)
     def forward(self, input, normalized_shape, weight=None, bias=None, eps=1e-05) -> torch.Tensor:
         # print("layernorm : start!!")
-        return self.func(input, normalized_shape, weight=None, bias=None, eps=1e-05)
+        return self.func(input, normalized_shape, weight, bias, eps)
 
 class Add_module(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
     def forward(self, input, another_input) -> torch.Tensor:
         return torch.add(input, another_input)
+    
+class Cat_module(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+    def forward(self, tensors, dim=0, *, out=None) -> torch.Tensor:
+        return torch.cat(tensors, dim, out)
+    
 # class Concat_module(torch.nn.Module):
 #     def __init__(self) -> None:
 #         super().__init__()
