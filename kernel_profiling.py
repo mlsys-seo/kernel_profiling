@@ -99,7 +99,6 @@ record = Event_record()
 forward_events = []
 backward_events = []
 monkeypatch_func_to_module()
-# import pdb; pdb.set_trace()
 train_stream = torch.cuda.Stream()
 infer_stream = torch.cuda.Stream()
 

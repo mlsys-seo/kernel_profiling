@@ -375,7 +375,6 @@ def densenet121(*, weights: Optional[DenseNet121_Weights] = None, progress: bool
         :members:
     """
     weights = DenseNet121_Weights.verify(weights)
-    import pdb; pdb.set_trace()
     return _densenet(32, (6, 12, 24, 16), 64, weights, progress, **kwargs)
 
 
