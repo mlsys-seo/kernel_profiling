@@ -12,24 +12,33 @@ from util import *
 import argparse 
 import autonvtx
 
-def get_forward_pre_hook(event):
+def get_forward_pre_hook(event, label):
     def forward_pre_hook(m, input):
-        event.record_start()
+        torch.cuda.nvtx.range_push(label)
+        # event.record_start()
+        print(f"{label}")
     return forward_pre_hook
 
-def get_forward_post_hook(event):
+def get_forward_post_hook(event, label):
     def forward_post_hook(m, input, output):
-        event.record_end()
+        # event.record_end()
+        torch.cuda.nvtx.range_pop()
     return forward_post_hook
 
-def get_backward_pre_hook(event):
+def get_backward_pre_hook(event, label):
     def backward_pre_hook(m, input):
-        event.record_start()
+        torch.cuda.nvtx.range_push(label)
+        # event.record_start()
+        # print(f"{label}")
+        # if "Hardswish" in label:
+            # print(m.inplace)
     return backward_pre_hook
 
-def get_backward_post_hook(event):
+def get_backward_post_hook(event, label):
     def backward_post_hook(m, input, output):
-        event.record_end()
+        # event.record_end()
+        torch.cuda.nvtx.range_pop()
+        pass
     return backward_post_hook
 
 parent_name = None
@@ -43,13 +52,14 @@ def traversal_all_layers(module):
         #layer
         if not isinstance(m, nn.Sequential) \
             and "torch.nn.modules" in type_name:
+            if "Hardswish" in str(m):
+                pass
             forward_event = Event_record()
-            # backward_event = Event_record()
-            
-            m.register_forward_pre_hook(get_forward_pre_hook(forward_event))
-            m.register_forward_hook(get_forward_post_hook(forward_event))
-            # m.register_full_backward_pre_hook(get_backward_pre_hook(backward_event))
-            # m.register_full_backward_hook(get_backward_post_hook(backward_event))
+            backward_event = Event_record()
+            m.register_forward_pre_hook(get_forward_pre_hook(forward_event, str(m)))
+            m.register_forward_hook(get_forward_post_hook(forward_event, str(m)))
+            m.register_full_backward_pre_hook(get_backward_pre_hook(backward_event, str(m)))
+            m.register_full_backward_hook(get_backward_post_hook(backward_event, str(m)))
             forward_events.append([parent_name, str(m), forward_event])
             # backward_events.append(backward_event)
         else:
@@ -89,21 +99,31 @@ record = Event_record()
 forward_events = []
 backward_events = []
 monkeypatch_func_to_module()
-
+# import pdb; pdb.set_trace()
+train_stream = torch.cuda.Stream()
 infer_stream = torch.cuda.Stream()
 
-model = get_model_by_name(model_name)
-x = get_data_by_name("imagenet", batch_size)
-
-infer_warmup(infer_stream, model, x)
+# model = get_model_by_name(model_name)
+import my_models as models
+model = eval(f"models.{model_name}()").to("cuda")
 traversal_all_layers(model)
-import autonvtx; autonvtx(model)
-graph = infer_capture(infer_stream, model, x)
+inputs = get_data_by_name("imagenet", batch_size)
+criterion = nn.CrossEntropyLoss().cuda()
+optimizer = torch.optim.Adam(model.parameters(), 0.1, capturable=True)
 
-for _ in range(4):
-    graph.replay()
+
+# train
+train_warmup(train_stream, model, inputs, criterion, optimizer)
+train_graph = train_capture(train_stream, model, inputs, criterion, optimizer)
+
+# infer
+infer_warmup(infer_stream, model, inputs)
+infer_graph = infer_capture(infer_stream, model, inputs)
+
+for _ in range(1):
+    infer_graph.replay()
 torch.cuda.synchronize()
 
 for parent, name, event in forward_events:
-    print(f"{parent}/{name}/{event.get_time()}")
-    
+    # print(f"{parent}/{name}/{event.get_time()}")
+    pass

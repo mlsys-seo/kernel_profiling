@@ -29,21 +29,34 @@ def train_warmup(stream, model, input, criterion, optimizer, iter_num=4):
     stream.wait_stream(torch.cuda.current_stream())
     with torch.cuda.stream(stream):
         for _ in range(iter_num):
-            # optimizer.zero_grad()
             outputs = model(input)
             loss = criterion(outputs, outputs)
             loss.backward()
             optimizer.step()
     torch.cuda.current_stream().wait_stream(stream)
+    
+def train_capture(stream, model, input, criterion, optimizer, iter_num=4):
+    graph = torch.cuda.CUDAGraph()
+    with torch.cuda.graph(graph):
+        stream.wait_stream(torch.cuda.current_stream())
+        with torch.cuda.stream(stream):
+            for _ in range(iter_num):
+                outputs = model(input)
+                loss = criterion(outputs, outputs)
+                loss.backward()
+                optimizer.step()
+        torch.cuda.current_stream().wait_stream(stream)
+    return graph
 
 def infer_warmup(stream, model, input, iter_num=4):
     with torch.no_grad():
         stream.wait_stream(torch.cuda.current_stream())
         with torch.cuda.stream(stream):
             for _ in range(iter_num):
-                output = model(input)
+                outputs = model(input)
         torch.cuda.current_stream().wait_stream(stream)
-    return output
+    return outputs
+
 def infer_capture(stream, model, input, iter_num=4, event=None):
     graph = torch.cuda.CUDAGraph()
     with torch.cuda.graph(graph):
@@ -91,10 +104,26 @@ class Relu_module(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
         self.func = copy_func(F.relu)
-    def forward(self, x: torch.Tensor, inplace=True) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, inplace=False) -> torch.Tensor:
         # print("relu : start!!")
-        return self.func(x, inplace=inplace)
+        return self.func(x, inplace=False)
     
+class Hardswish_module(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.func = copy_func(F.hardswish)
+    def forward(self, x: torch.Tensor, inplace=False) -> torch.Tensor:
+        # print("hardswish : start!!")
+        return self.func(x, inplace=False)
+
+class Dropout_module(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.func = copy_func(F.dropout)
+    def forward(self, x, p=0.5, training=True, inplace=False) -> torch.Tensor:
+        # print("hardswish : start!!")
+        return self.func(x, p=0.5, training=True, inplace=False)
+
 class Layernorm_module(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
@@ -102,7 +131,12 @@ class Layernorm_module(torch.nn.Module):
     def forward(self, input, normalized_shape, weight=None, bias=None, eps=1e-05) -> torch.Tensor:
         # print("layernorm : start!!")
         return self.func(input, normalized_shape, weight=None, bias=None, eps=1e-05)
-    
+
+class Add_module(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+    def forward(self, input, another_input) -> torch.Tensor:
+        return torch.add(input, another_input)
 # class Concat_module(torch.nn.Module):
 #     def __init__(self) -> None:
 #         super().__init__()
@@ -110,11 +144,14 @@ class Layernorm_module(torch.nn.Module):
 #     def forward(self, tensors, dim=0,*,out=None) -> torch.Tensor:
 #         print("Concat : start!!")
 #         return self.func(tensors, dim=0,out=None)
-
+import pickle
 def monkeypatch_func_to_module():
     F.layer_norm = Layernorm_module()
     F.relu = Relu_module()
     F.adaptive_avg_pool2d = Adaptive_avg_pool2d_module()
+    F.hardswish = Hardswish_module()
+    F.dropout = Dropout_module()
+    # import pdb; pdb.set_trace()
     # torch._C._VariableFunctions.cat = Concat_module()    
     
     
