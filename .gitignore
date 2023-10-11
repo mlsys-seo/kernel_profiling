@@ -1,4 +1,8 @@
 *.pyc
 *.nsys-rep
+<<<<<<< HEAD
 *.splite
 ./my_models/__pycache__/*
+=======
+*.sqlite
+>>>>>>> b7b7b5f773c112a559d14b7f9d7f8fb683b04c5a

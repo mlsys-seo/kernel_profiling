@@ -88,6 +88,15 @@ inputs = get_data_by_name("imagenet", batch_size)
 criterion = nn.CrossEntropyLoss().cuda()
 optimizer = torch.optim.Adam(model.parameters(), 0.1, capturable=True)
 
+print("============================")
+if args.do_train == "True":
+    print(f"train")
+else:
+    print("infer")
+print(f"model: {model_name}")
+print(f"batch_size: {batch_size}")
+print("============================\n\n")
+
 if args.do_train == "True":
     # train
     train_warmup(stream, model, inputs, criterion, optimizer, iter_num=2)
