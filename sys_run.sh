@@ -1,7 +1,7 @@
 
 models="densenet121 densenet201 mobilenet_v3_large resnet18 resnet50 efficientnet_v2_m efficientnet_v2_l convnext_tiny convnext_small convnext_base convnext_large shufflenet_v2_x0_5 shufflenet_v2_x1_0 shufflenet_v2_x1_5 shufflenet_v2_x2_0"
-train_batch_sizes="128"
-infer_batch_sizes="32"
+train_batch_sizes="64"
+infer_batch_sizes="16"
 
 for model in ${models}
 do
