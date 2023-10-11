@@ -11,7 +11,7 @@ from torchvision.models._api import register_model, Weights, WeightsEnum
 from torchvision.models._meta import _IMAGENET_CATEGORIES
 from torchvision.models._utils import _make_divisible, _ovewrite_named_param, handle_legacy_interface
 
-
+from util import Add_module
 __all__ = [
     "MobileNetV3",
     "MobileNet_V3_Large_Weights",
@@ -20,12 +20,7 @@ __all__ = [
     "mobilenet_v3_small",
 ]
 
-class Add_module(torch.nn.Module):
-    def __init__(self) -> None:
-        super().__init__()
-    def forward(self, input, another_input) -> torch.Tensor:
-        return torch.add(input, another_input)
-
+add = Add_module()
 class InvertedResidualConfig:
     # Stores information listed at Tables 1 and 2 of the MobileNetV3 paper
     def __init__(
@@ -115,7 +110,6 @@ class InvertedResidual(nn.Module):
     def forward(self, input: Tensor) -> Tensor:
         result = self.block(input)
         if self.use_res_connect:
-            add = Add_module()
             result = add(result, input)
         return result
 

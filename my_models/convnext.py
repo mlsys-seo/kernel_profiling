@@ -13,6 +13,7 @@ from torchvision.models._api import register_model, Weights, WeightsEnum
 from torchvision.models._meta import _IMAGENET_CATEGORIES
 from torchvision.models._utils import _ovewrite_named_param, handle_legacy_interface
 
+from util import Add_module
 
 __all__ = [
     "ConvNeXt",
@@ -25,12 +26,7 @@ __all__ = [
     "convnext_base",
     "convnext_large",
 ]
-class Add_module(torch.nn.Module):
-    def __init__(self) -> None:
-        super().__init__()
-    def forward(self, input, another_input) -> torch.Tensor:
-        return torch.add(input, another_input)
-    
+
 add = Add_module()
 
 class LayerNorm2d(nn.LayerNorm):

@@ -79,8 +79,8 @@ args = parser.parse_args()
 
 model_name = args.model_name.lower()
 batch_size = args.batch_size
-
 monkeypatch_func_to_module()
+
 stream = torch.cuda.Stream()
 
 model = eval(f"models.{model_name}()").to("cuda")
@@ -101,10 +101,12 @@ if args.do_train == "True":
     # train
     train_warmup(stream, model, inputs, criterion, optimizer, iter_num=2)
     traversal_all_layers(model)
+    torch.cuda._sleep(1)
     train_warmup_update_nvtx(stream, model, inputs, criterion, optimizer, iter_num=1)
 
 else:
     # infer
     infer_warmup(stream, model, inputs, iter_num=2)
     traversal_all_layers(model)
+    torch.cuda._sleep(1)
     infer_warmup(stream, model, inputs, iter_num=1)
