@@ -24,6 +24,7 @@ class Event_record():
         self.record_end()
     def get_time(self):
         return self.start.elapsed_time(self.end)
+    
 def train_warmup(stream, model, input, criterion, optimizer, iter_num=4):
     stream.wait_stream(torch.cuda.current_stream())
     with torch.cuda.stream(stream):
@@ -39,13 +40,14 @@ def train_warmup_update_nvtx(stream, model, input, criterion, optimizer, iter_nu
     with torch.cuda.stream(stream):
         for _ in range(iter_num):
             outputs = model(input)
+            torch.cuda.nvtx.range_push(f"loss")
             loss = criterion(outputs, outputs)
+            torch.cuda.nvtx.range_pop()
             loss.backward()
             torch.cuda.nvtx.range_push(f'update')
             optimizer.step()
             torch.cuda.nvtx.range_pop()
     torch.cuda.current_stream().wait_stream(stream)
-    
     
 def train_capture(stream, model, input, criterion, optimizer, iter_num=4):
     graph = torch.cuda.CUDAGraph()
@@ -150,17 +152,69 @@ class Layernorm_module(torch.nn.Module):
         # print("layernorm : start!!")
         return self.func(input, normalized_shape, weight, bias, eps)
 
+# class My_function(torch.autograd.Function):
+#     bwd_func = None
+#     output = None
+#     @staticmethod
+#     def forward(ctx, inp, another_input):
+#         torch.cuda.nvtx.range_push(f'f_add')
+#         output = torch.add(inp, another_input)
+#         torch.cuda.nvtx.range_pop()
+        
+#         # print(f"inside of my_function gfn : {My_function.bwd_func}")
+
+#         return output
+    
+    # @staticmethod
+    # def backward(ctx, grad_output):
+    #     torch.cuda.nvtx.range_push(f'b_add')
+    #     a = torch.rand(1).to("cuda")
+    #     a = a + 1
+    #     grad_input = My_function.bwd_func(grad_output)
+    #     print("herere!!!!!")
+    #     a = torch.rand(1).to("cuda")
+    #     torch.cuda.nvtx.range_pop()
+        
+    #     return grad_input
+    
+# class Add_module(torch.nn.Module):
+#     def __init__(self) -> None:
+#         super().__init__()
+#     def forward(self, input, another_input) -> torch.Tensor:
+#         torch.cuda.nvtx.range_push(f'f_add')
+#         x = torch.add(input, another_input)
+#         torch.cuda.nvtx.range_pop()
+#         return x
+#     def backward(self, input):
+#         torch.cuda.nvtx.range_push(f'b_add')
+#         output = my_function(input, self.parameters)
+#         torch.cuda.nvtx.range_pop()
+#         return output
+
 class Add_module(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
     def forward(self, input, another_input) -> torch.Tensor:
-        return torch.add(input, another_input)
+        torch.cuda.nvtx.range_push(f'f_add')
+        x = torch.add(input, another_input)
+        torch.cuda.nvtx.range_pop()
+        return x
     
+    # def backward(self, input):
+    #     print("add backward!!")
+    #     torch.cuda.nvtx.range_push(f'b_add')
+    #     output = My_function.apply(input, self.parameters)
+    #     torch.cuda.nvtx.range_pop()
+    #     return output
+
 class Cat_module(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
     def forward(self, tensors, dim=0, out=None) -> torch.Tensor:
-        return torch.cat(tensors, dim, out=out)
+        torch.cuda.nvtx.range_push(f"f_cat")
+        x = torch.cat(tensors, dim, out=out)
+        torch.cuda.nvtx.range_pop()
+        return x
     
 # class Concat_module(torch.nn.Module):
 #     def __init__(self) -> None:
@@ -169,7 +223,6 @@ class Cat_module(torch.nn.Module):
 #     def forward(self, tensors, dim=0,*,out=None) -> torch.Tensor:
 #         print("Concat : start!!")
 #         return self.func(tensors, dim=0,out=None)
-import pickle
 def monkeypatch_func_to_module():
     F.layer_norm = Layernorm_module()
     F.relu = Relu_module()

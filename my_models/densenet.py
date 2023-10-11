@@ -17,6 +17,7 @@ from torchvision.models._utils import _ovewrite_named_param, handle_legacy_inter
 
 from util import Cat_module
 
+    
 cat  = Cat_module()
 __all__ = [
     "DenseNet",

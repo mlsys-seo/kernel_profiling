@@ -11,7 +11,8 @@ from torchvision.models._api import register_model, Weights, WeightsEnum
 from torchvision.models._meta import _IMAGENET_CATEGORIES
 from torchvision.models._utils import _ovewrite_named_param, handle_legacy_interface
 
-
+from util import Cat_module
+cat = Cat_module()
 __all__ = [
     "ShuffleNetV2",
     "ShuffleNet_V2_X0_5_Weights",
@@ -92,9 +93,9 @@ class InvertedResidual(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         if self.stride == 1:
             x1, x2 = x.chunk(2, dim=1)
-            out = torch.cat((x1, self.branch2(x2)), dim=1)
+            out = cat((x1, self.branch2(x2)), dim=1)
         else:
-            out = torch.cat((self.branch1(x), self.branch2(x)), dim=1)
+            out = cat((self.branch1(x), self.branch2(x)), dim=1)
 
         out = channel_shuffle(out, 2)
 

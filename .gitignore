@@ -1,2 +1,4 @@
 *.pyc
 *.nsys-rep
+*.splite
+./my_models/__pycache__/*
