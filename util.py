@@ -106,6 +106,13 @@ class Relu_module(torch.nn.Module):
     def forward(self, x: torch.Tensor, inplace=False) -> torch.Tensor:
         # print("relu : start!!")
         return self.func(x, inplace=False)
+
+class Silu_module(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.func = copy_func(F.selu)
+    def forward(self, x: torch.Tensor, inplace=False) -> torch.Tensor:
+        return self.func(x, inplace=False)
     
 class Hardswish_module(torch.nn.Module):
     def __init__(self) -> None:
@@ -154,6 +161,7 @@ import pickle
 def monkeypatch_func_to_module():
     F.layer_norm = Layernorm_module()
     F.relu = Relu_module()
+    F.silu = Silu_module()
     F.adaptive_avg_pool2d = Adaptive_avg_pool2d_module()
     F.hardswish = Hardswish_module()
     F.dropout = Dropout_module()
