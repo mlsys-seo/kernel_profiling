@@ -24,7 +24,6 @@ class Event_record():
         self.record_end()
     def get_time(self):
         return self.start.elapsed_time(self.end)
-    
 def train_warmup(stream, model, input, criterion, optimizer, iter_num=4):
     stream.wait_stream(torch.cuda.current_stream())
     with torch.cuda.stream(stream):
@@ -34,6 +33,19 @@ def train_warmup(stream, model, input, criterion, optimizer, iter_num=4):
             loss.backward()
             optimizer.step()
     torch.cuda.current_stream().wait_stream(stream)
+    
+def train_warmup_update_nvtx(stream, model, input, criterion, optimizer, iter_num=4):
+    stream.wait_stream(torch.cuda.current_stream())
+    with torch.cuda.stream(stream):
+        for _ in range(iter_num):
+            outputs = model(input)
+            loss = criterion(outputs, outputs)
+            loss.backward()
+            torch.cuda.nvtx.range_push(f'update')
+            optimizer.step()
+            torch.cuda.nvtx.range_pop()
+    torch.cuda.current_stream().wait_stream(stream)
+    
     
 def train_capture(stream, model, input, criterion, optimizer, iter_num=4):
     graph = torch.cuda.CUDAGraph()
