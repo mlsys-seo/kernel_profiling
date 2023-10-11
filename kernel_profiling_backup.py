@@ -8,26 +8,30 @@ import torch.optim as optim
 # from transformers import BertModel
 
 from util import *
-import my_models as models
+
 import argparse 
 
-def get_forward_pre_hook(label):
+def get_forward_pre_hook(event, label):
     def forward_pre_hook(m, input):
         torch.cuda.nvtx.range_push(f'f_{label}')
+        event.record_start()
     return forward_pre_hook
 
-def get_forward_post_hook(label):
+def get_forward_post_hook(event, label):
     def forward_post_hook(m, input, output):
+        event.record_end()
         torch.cuda.nvtx.range_pop()
     return forward_post_hook
 
-def get_backward_pre_hook(label):
+def get_backward_pre_hook(event, label):
     def backward_pre_hook(m, input):
         torch.cuda.nvtx.range_push(f'b_{label}')
+        event.record_start()
     return backward_pre_hook
 
-def get_backward_post_hook(label):
+def get_backward_post_hook(event, label):
     def backward_post_hook(m, input, output):
+        event.record_end()
         torch.cuda.nvtx.range_pop()
     return backward_post_hook
 
@@ -39,13 +43,18 @@ def traversal_all_layers(module):
     for block_name, m in module._modules.items():
         
         type_name = str(type(m))
+        import pdb; pdb.set_trace()
         #layer
         if not isinstance(m, nn.Sequential) \
             and "torch.nn.modules" in type_name:
-            m.register_forward_pre_hook(get_forward_pre_hook(str(m)))
-            m.register_forward_hook(get_forward_post_hook(str(m)))
-            m.register_full_backward_pre_hook(get_backward_pre_hook(str(m)))
-            m.register_full_backward_hook(get_backward_post_hook(str(m)))
+            forward_event = Event_record()
+            backward_event = Event_record()
+            m.register_forward_pre_hook(get_forward_pre_hook(forward_event, str(m)))
+            m.register_forward_hook(get_forward_post_hook(forward_event, str(m)))
+            m.register_full_backward_pre_hook(get_backward_pre_hook(backward_event, str(m)))
+            m.register_full_backward_hook(get_backward_post_hook(backward_event, str(m)))
+            forward_events.append([parent_name, str(m), forward_event])
+            # backward_events.append(backward_event)
         else:
             if("densenet" in model_name):
                 if("block" in str(block_name) or "trans" in str(block_name)):
@@ -80,22 +89,33 @@ args = parser.parse_args()
 model_name = args.model_name.lower()
 batch_size = args.batch_size
 
+record = Event_record()
+forward_events = []
+backward_events = []
 monkeypatch_func_to_module()
-stream = torch.cuda.Stream()
+train_stream = torch.cuda.Stream()
+infer_stream = torch.cuda.Stream()
 
+# model = get_model_by_name(model_name)
+import my_models as models
 model = eval(f"models.{model_name}()").to("cuda")
+traversal_all_layers(model)
 inputs = get_data_by_name("imagenet", batch_size)
 criterion = nn.CrossEntropyLoss().cuda()
 optimizer = torch.optim.Adam(model.parameters(), 0.1, capturable=True)
 
 if args.do_train == "True":
     # train
-    train_warmup(stream, model, inputs, criterion, optimizer, iter_num=2)
-    traversal_all_layers(model)
-    train_warmup_update_nvtx(stream, model, inputs, criterion, optimizer, iter_num=1)
-
+    train_warmup(train_stream, model, inputs, criterion, optimizer)
+    graph = train_capture(train_stream, model, inputs, criterion, optimizer)
 else:
     # infer
-    infer_warmup(stream, model, inputs, iter_num=2)
-    traversal_all_layers(model)
-    infer_warmup(stream, model, inputs, iter_num=1)
+    infer_warmup(infer_stream, model, inputs)
+    graph = infer_capture(infer_stream, model, inputs)
+
+for _ in range(1):
+    graph.replay()
+torch.cuda.synchronize()
+
+for parent, name, event in forward_events:
+    print(f"{parent}/{name}/{event.get_time()}")
