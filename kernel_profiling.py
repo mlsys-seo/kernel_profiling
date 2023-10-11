@@ -10,11 +10,10 @@ import torch.optim as optim
 from util import *
 
 import argparse 
-import autonvtx
 
 def get_forward_pre_hook(event, label):
     def forward_pre_hook(m, input):
-        torch.cuda.nvtx.range_push(label)
+        torch.cuda.nvtx.range_push(f'f_{label}')
         event.record_start()
     return forward_pre_hook
 
@@ -26,11 +25,8 @@ def get_forward_post_hook(event, label):
 
 def get_backward_pre_hook(event, label):
     def backward_pre_hook(m, input):
-        torch.cuda.nvtx.range_push(label)
+        torch.cuda.nvtx.range_push(f'b_{label}')
         event.record_start()
-        # print(f"{label}")
-        # if "Hardswish" in label:
-            # print(m.inplace)
     return backward_pre_hook
 
 def get_backward_post_hook(event, label):
@@ -50,8 +46,6 @@ def traversal_all_layers(module):
         #layer
         if not isinstance(m, nn.Sequential) \
             and "torch.nn.modules" in type_name:
-            if "Hardswish" in str(m):
-                pass
             forward_event = Event_record()
             backward_event = Event_record()
             m.register_forward_pre_hook(get_forward_pre_hook(forward_event, str(m)))
@@ -88,6 +82,7 @@ def traversal_all_layers(module):
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_name', type=str)
 parser.add_argument('--batch_size', type=int)
+parser.add_argument('--do_train')
 args = parser.parse_args()
 
 model_name = args.model_name.lower()
@@ -108,17 +103,17 @@ inputs = get_data_by_name("imagenet", batch_size)
 criterion = nn.CrossEntropyLoss().cuda()
 optimizer = torch.optim.Adam(model.parameters(), 0.1, capturable=True)
 
-
-# train
-train_warmup(train_stream, model, inputs, criterion, optimizer)
-train_graph = train_capture(train_stream, model, inputs, criterion, optimizer)
-
-# infer
-infer_warmup(infer_stream, model, inputs)
-infer_graph = infer_capture(infer_stream, model, inputs)
+if args.do_train == "True":
+    # train
+    train_warmup(train_stream, model, inputs, criterion, optimizer)
+    graph = train_capture(train_stream, model, inputs, criterion, optimizer)
+else:
+    # infer
+    infer_warmup(infer_stream, model, inputs)
+    graph = infer_capture(infer_stream, model, inputs)
 
 for _ in range(1):
-    infer_graph.replay()
+    graph.replay()
 torch.cuda.synchronize()
 
 for parent, name, event in forward_events:

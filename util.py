@@ -40,11 +40,10 @@ def train_capture(stream, model, input, criterion, optimizer, iter_num=4):
     with torch.cuda.graph(graph):
         stream.wait_stream(torch.cuda.current_stream())
         with torch.cuda.stream(stream):
-            for _ in range(iter_num):
-                outputs = model(input)
-                loss = criterion(outputs, outputs)
-                loss.backward()
-                optimizer.step()
+            outputs = model(input)
+            loss = criterion(outputs, outputs)
+            loss.backward()
+            optimizer.step()
         torch.cuda.current_stream().wait_stream(stream)
     return graph
 
@@ -122,7 +121,7 @@ class Dropout_module(torch.nn.Module):
         self.func = copy_func(F.dropout)
     def forward(self, x, p=0.5, training=True, inplace=False) -> torch.Tensor:
         # print("hardswish : start!!")
-        return self.func(x, p, training, inplace)
+        return self.func(x, p, training, inplace=False)
 
 class Layernorm_module(torch.nn.Module):
     def __init__(self) -> None:
