@@ -43,6 +43,7 @@ def traversal_all_layers(module):
     for block_name, m in module._modules.items():
         
         type_name = str(type(m))
+        import pdb; pdb.set_trace()
         #layer
         if not isinstance(m, nn.Sequential) \
             and "torch.nn.modules" in type_name:

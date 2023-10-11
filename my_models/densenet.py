@@ -58,7 +58,7 @@ class _DenseLayer(nn.Module):
         self.memory_efficient = memory_efficient
 
     def bn_function(self, inputs: List[Tensor]) -> Tensor:
-        concated_features = torch.cat(tuple(inputs), 1)
+        concated_features = cat(inputs, 1)
         bottleneck_output = self.conv1(self.relu1(self.norm1(concated_features)))  # noqa: T484
         return bottleneck_output
 
@@ -134,7 +134,7 @@ class _DenseBlock(nn.ModuleDict):
         for name, layer in self.items():
             new_features = layer(features)
             features.append(new_features)
-        return torch.cat(tuple(features), 1)
+        return cat(features, 1)
 
 
 class _Transition(nn.Sequential):

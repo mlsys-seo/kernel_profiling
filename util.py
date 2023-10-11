@@ -147,8 +147,8 @@ class Add_module(torch.nn.Module):
 class Cat_module(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
-    def forward(self, tensors, dim=0, *, out=None) -> torch.Tensor:
-        return torch.cat(tensors, dim, out)
+    def forward(self, tensors, dim=0, out=None) -> torch.Tensor:
+        return torch.cat(tensors, dim, out=out)
     
 # class Concat_module(torch.nn.Module):
 #     def __init__(self) -> None:
