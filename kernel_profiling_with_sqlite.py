@@ -69,8 +69,6 @@ for file in sqlite_files:
     df = df.astype({'duration[ns]': 'float'})
     df = df.rename(columns={'duration[ns]': 'duration[us]'})
     df['duration[us]'] = df['duration[us]']/1000
-    df = df.dropna(subset=['nvtxRange'])
-    df = df.reset_index(drop=True)
     
     conn.close()
     
@@ -111,67 +109,31 @@ for file in sqlite_files:
     df = df[['kernelName', 'nvtxRange', 'duration[us]', 'wave']]
     df[['kernelType']] = None
     
-    same_nvtx_list = [0]
-    for index, row in df.iloc[1:].iterrows():
-        if df.loc[index, 'nvtxRange'] != df.loc[same_nvtx_list[-1], 'nvtxRange']:
-            if len(same_nvtx_list) == 1:
-                df.loc[same_nvtx_list[0], 'kernelType'] = 'main'
-            same_nvtx_df = df.loc[same_nvtx_list]
-            df['kernelType'] = df['kernelName'].apply(lambda x: 'main' if any(keyword in x for keyword in ['scudnn', 'gemm', 'wgrad', 'dgrad', 'bn', 'scalePackedTensor', 'max_pool', 'launch_clamp_scalar', 'hardswish', 'hardsigmoid']) else 'sub')
-            same_nvtx_list = [index]
-        else:
+    spin_kernel = df['kernelName'].str.contains('spin')
+    spin_kernel_idx = df[spin_kernel].index
+    df = df[spin_kernel_idx[0]+1:]
+    df =df.reset_index(drop=True)
+    
+    same_nvtx_list = []
+    main_kernel_list = ['Winograd', 'scudnn', 'gemm', 'wgrad', 'dgrad', 'bn', 'scalePackedTensor', 'max_pool', 'launch_clamp_scalar', 'hardswish', 'hardsigmoid']
+    for index, row in df.iloc[:].iterrows():
+        if len(same_nvtx_list) == 0:
             same_nvtx_list.append(index)
+        else:
+            if df.loc[same_nvtx_list[-1], 'nvtxRange'] == df.loc[index, 'nvtxRange']:
+                same_nvtx_list.append(index)
+            else:
+                if len(same_nvtx_list) == 1:
+                    df.loc[same_nvtx_list[0], 'kernelType'] = 'main'
+                else:
+                    for j in same_nvtx_list:
+                        df.loc[j,'kernelType'] = 'sub'
+                        for keyword in main_kernel_list:
+                            if keyword in df.loc[j,'kernelName']:
+                                df.loc[j,'kernelType'] = 'main'
+                same_nvtx_list = []
+                same_nvtx_list.append(index)
     df.loc[df['kernelName'].str.contains('|'.join(['OnSelf', 'Offset'])), 'kernelType'] = 'sub'
-    import pdb; pdb.set_trace()
-            
-    
-    
-    
-    # same_nvtx_index = []
-    # pre_pre_nvtx = df.loc[0, 'nvtxRange']
-    # pre_nvtx = df.loc[1, 'nvtxRange']
-    # for index, row in df.iloc[2:].iterrows():
-    #     pre_pre_nvtx = df.loc[index-2, 'nvtxRange']
-    #     pre_nvtx = df.loc[index-1, 'nvtxRange']
-    #     current_nvtx = df.loc[index, 'nvtxRange']
-    #     if pre_pre_nvtx != pre_nvtx and pre_nvtx != current_nvtx:
-    #         df.at[index-1, 'kernelType'] = 'main'
-    #         import pdb; pdb.set_trace()
-    #     elif pre_nvtx == pre_pre_nvtx:
-    #         same_nvtx_index.append(index-2)
-    #         same_nvtx_index.append(index-1)
-    #     elif pre_nvtx != pre_pre_nvtx:
-    #         same_nvtx_index = list(set(same_nvtx_index))
-    #         same_nvtx_index.sort()
-    #         for same_nvtx_sub_idx in same_nvtx_index:
-    #             kernel_names = df.at[same_nvtx_sub_idx, 'kernelName']
-    #             if any(keyword in kernel_names for keyword in ['scudnn', 'gemm', 'wgrad', 'dgrad', 'elementwise', 'bn', 'scalePackedTensor', 'max_pool', 'launch_clamp_scalar', 'hardswish', 'hardsigmoid']):
-    #                 df.at[same_nvtx_sub_idx, 'kernelType'] = 'main'
-    #             else:
-    #                 df.at[same_nvtx_sub_idx, 'kernelType'] = 'sub'
-    #     if index == len(df):
-    #         if df['nvtxRange'].iloc[-1] == df['nvtxRange'].iloc[-2]:
-    #             same_nvtx_index.append(index-1)
-    #             same_nvtx_index.append(index)
-    #             for same_nvtx_sub_idx in same_nvtx_index:
-    #                 kernel_names = df.at[same_nvtx_sub_idx, 'kernelName']
-    #                 if any(keyword in kernel_names for keyword in ['scudnn', 'gemm', 'wgrad', 'dgrad', 'elementwise', 'bn', 'scalePackedTensor', 'max_pool', 'launch_clamp_scalar', 'hardswish', 'hardsigmoid']):
-    #                     df.at[same_nvtx_sub_idx, 'kernelType'] = 'main'
-    #                 else:
-    #                     df.at[same_nvtx_sub_idx, 'kernelType'] = 'sub'
-    #         else:
-    #             df.at[index, 'kernelType'] = 'main'
-            
-    #     if pre_nvtx == current_nvtx:
-    #         same_nvtx_index.append(index)
-    #     else:
-    #         same_nvtx_index = []
-            
-            
-            
-    
                 
-    # df.to_csv(f"{sqlite_file_path}/../csv/test.csv", index=False)
+    df.to_csv(f"{sqlite_file_path}/../csv/{file[:-7]}.csv", index=False)
     # import pdb; pdb.set_trace()
-    
-    
