@@ -11,8 +11,10 @@ import copy
 
 import matplotlib.pyplot as plt
 
+
+server = 'A40'
 current_path = os.getcwd()
-sqlite_file_path = f'{current_path}/data/sqlite'
+sqlite_file_path = f'{current_path}/data/{server}/sqlite'
 sqlite_files = os.listdir(sqlite_file_path)
 
 for file in sqlite_files:
