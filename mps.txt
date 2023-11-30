@@ -1,0 +1,12 @@
+export CUDA_VISIBLE_DEVICES=1
+export CUDA_MPS_ACTIVE_THREAD_PERCENTAGE=50
+sudo nvidia-smi -i 1 -c EXCLUSIVE_PROCESS
+nvidia-cuda-mps-control -d
+
+
+
+# --------------
+
+echo quit | nvidia-cuda-mps-control
+sudo nvidia-smi -i 1 -c DEFAULT
+unset CUDA_VISIBLE_DEVICES

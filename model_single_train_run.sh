@@ -1,8 +1,9 @@
-do_train_or_infers="infer"
-models="densenet121" 
+do_train_or_infers="train"
+# models="efficientnet_v2_m densenet121 mobilenetv31.0 resnet50 convnext_base" 
+models="mobilenetv31.0 resnet50 convnext_base" 
 # models="densenet201 resnet18 efficientnet_v2_l convnext_tiny convnext_small convnext_large shufflenet_v2_x0_5 shufflenet_v2_x1_0 shufflenet_v2_x1_5 shufflenet_v2_x2_0" 
-batch_sizes="16"
-percentiles="10"
+batch_sizes="64 128 256 512"
+percentiles="10 20 30 40 50 60 70 80 90 100"
 
 > model_single_error.txt
 
@@ -26,6 +27,7 @@ do
         done
     done
 done
+
 
                 # nsys profile \
                 # -t cuda,osrt,nvtx,cudnn,cublas \

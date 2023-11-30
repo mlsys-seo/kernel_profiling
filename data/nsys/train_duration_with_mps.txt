@@ -1,0 +1,1 @@
+model,batch_size,mps_percent,avg_forward_duration,avg_loss_duration,avg_backward_duration,avg_update_duration,avg_total_duration
